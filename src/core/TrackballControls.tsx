@@ -1,10 +1,15 @@
 import * as React from 'react'
-import { ReactThreeFiber, useThree, useFrame } from '@react-three/fiber'
+import { ReactThreeFiber, Performance, useThree, useFrame } from '@react-three/fiber'
 import { TrackballControls as TrackballControlsImpl } from 'three-stdlib'
+import shallow from 'zustand/shallow'
 
 export type TrackballControls = ReactThreeFiber.Overwrite<
   ReactThreeFiber.Object3DNode<TrackballControlsImpl, typeof TrackballControlsImpl>,
-  { target?: ReactThreeFiber.Vector3; camera?: THREE.Camera }
+  {
+    target?: ReactThreeFiber.Vector3
+    camera?: THREE.Camera
+    regress?: boolean
+  }
 >
 
 declare global {
@@ -16,21 +21,28 @@ declare global {
 }
 
 export const TrackballControls = React.forwardRef<TrackballControlsImpl, TrackballControls>((props, ref) => {
-  const { camera, ...rest } = props
-  const { camera: defaultCamera, gl, invalidate } = useThree(({ camera, gl, invalidate }) => ({
-    camera,
-    gl,
-    invalidate,
-  }))
+  const { camera, regress, ...rest } = props
+  const { camera: defaultCamera, gl, invalidate, performance } = useThree(
+    ({ camera, gl, invalidate, performance }) => ({
+      camera,
+      gl,
+      invalidate,
+      performance,
+    }),
+    shallow
+  )
   const explCamera = camera || defaultCamera
-
   const [controls] = React.useState(() => new TrackballControlsImpl(explCamera, gl.domElement))
 
-  useFrame(() => controls?.update())
+  useFrame(() => controls.update())
   React.useEffect(() => {
-    controls?.addEventListener?.('change', invalidate)
-    return () => controls?.removeEventListener?.('change', invalidate)
-  }, [controls, invalidate])
+    const callback = () => {
+      invalidate()
+      if (regress) performance.regress()
+    }
+    controls?.addEventListener?.('change', callback)
+    return () => controls?.removeEventListener?.('change', callback)
+  }, [controls, regress, performance, invalidate])
 
-  return controls ? <primitive ref={ref} dispose={undefined} object={controls} {...rest} /> : null
+  return <primitive ref={ref} dispose={undefined} object={controls} {...rest} />
 })

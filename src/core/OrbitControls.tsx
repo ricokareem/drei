@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { ReactThreeFiber, useThree, useFrame } from '@react-three/fiber'
 import { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
+import shallow from 'zustand/shallow'
 
 export type OrbitControlsProps = ReactThreeFiber.Overwrite<
   ReactThreeFiber.Object3DNode<OrbitControlsImpl, typeof OrbitControlsImpl>,
@@ -19,7 +20,8 @@ export const OrbitControls = React.forwardRef<OrbitControlsImpl, OrbitControlsPr
         gl,
         invalidate,
         performance,
-      })
+      }),
+      shallow
     )
 
     const explCamera = camera || defaultCamera
@@ -39,7 +41,7 @@ export const OrbitControls = React.forwardRef<OrbitControlsImpl, OrbitControlsPr
         controls.removeEventListener('change', callback)
         controls.dispose()
       }
-    }, [controls, invalidate])
+    }, [controls, regress, performance, invalidate])
 
     return <primitive ref={ref} object={controls} enableDampening={enableDampening} {...restProps} />
   }
